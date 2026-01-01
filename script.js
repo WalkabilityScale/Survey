@@ -1,3 +1,38 @@
+// --- PART 1: THE START BUTTON LOGIC ---
+function startSurvey() {
+    var province = document.getElementById('province-select').value;
+    var postalInput = document.getElementById('postal-code-input').value;
+    var errorMsg = document.getElementById('error-message');
+
+    // 1. Validate Province
+    if (!province) {
+        errorMsg.innerText = "Please select a province.";
+        return;
+    }
+
+    // 2. Validate Postal Code (Allows "M5V 2H1", "M5V2H1", or "M5V-2H1")
+    var cleanCode = postalInput.trim().toUpperCase();
+    var regex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
+
+    if (!regex.test(cleanCode)) {
+        errorMsg.innerText = "Invalid format. Please use format like A1A 1A1.";
+        return;
+    }
+
+    // Standardize format (add space if missing for consistency)
+    if (cleanCode.length === 6) {
+        cleanCode = cleanCode.substring(0, 3) + " " + cleanCode.substring(3);
+    }
+    
+    // 3. Switch Screens (Hide Form -> Show Rings)
+    document.getElementById('landing-screen').classList.add('hidden');
+    document.getElementById('visualization-screen').classList.remove('hidden');
+
+    // 4. Draw the Visualization
+    drawBuffers();
+}
+
+// --- PART 2: THE VISUALIZATION LOGIC ---
 function drawBuffers() {
     var svg = document.getElementById('buffer-svg');
     
@@ -27,7 +62,7 @@ function drawBuffers() {
         svg.appendChild(circle);
     });
 
-    // --- LAYER 2: The Vertical Dashed Line ---
+    // --- LAYER 2: The Vertical Dashed Line (Black) ---
     var vLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
     vLine.setAttribute("x1", center);
     vLine.setAttribute("y1", 0);
@@ -35,15 +70,16 @@ function drawBuffers() {
     vLine.setAttribute("y2", 1200);
     vLine.setAttribute("stroke", "black"); 
     vLine.setAttribute("stroke-width", "4");
-    vLine.setAttribute("stroke-dasharray", "15, 15"); // 15px Dash, 15px Gap
+    vLine.setAttribute("stroke-dasharray", "15, 15"); // Dashed effect
     svg.appendChild(vLine);
 
-    // --- LAYER 3: The Labels (Horizontal Axis) ---
-    // Helper for Halo Text (Thick white border to be readable over lines)
+    // --- LAYER 3: The Horizontal Labels ---
+    
+    // Helper function to create text with a white "Halo" background
     function createHaloLabel(x, y, textContent, color) {
         var group = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
-        // Halo (Eraser)
+        // Halo (Eraser) - Makes text readable over lines
         var halo = document.createElementNS("http://www.w3.org/2000/svg", "text");
         halo.setAttribute("x", x);
         halo.setAttribute("y", y);
@@ -76,12 +112,18 @@ function drawBuffers() {
     steps.forEach(step => {
         var labelText = `${step.min}-mins walk`;
         
-        // Label on the LEFT (West)
+        // Label on the LEFT
         var leftLabel = createHaloLabel(center - step.r, center, labelText, step.color);
         svg.appendChild(leftLabel);
 
-        // Label on the RIGHT (East)
+        // Label on the RIGHT
         var rightLabel = createHaloLabel(center + step.r, center, labelText, step.color);
         svg.appendChild(rightLabel);
     });
 }
+
+// Optional: Auto-limit input length to 7 characters
+document.getElementById('postal-code-input').addEventListener('input', function (e) {
+    let val = e.target.value.toUpperCase();
+    if (val.length > 7) e.target.value = val.substring(0,7);
+});
