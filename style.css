@@ -49,12 +49,14 @@ button:hover {
     background-color: #218838;
 }
 
-/* Style for the walking time labels */
-.leaflet-tooltip.my-label {
-    background-color: rgba(255, 255, 255, 0.8);
-    border: 1px solid #ccc;
+/* Style for the Walking Time Text */
+.walking-label {
+    text-align: center;
     font-size: 12px;
     font-weight: bold;
-    color: #333;
-    box-shadow: none;
+    background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
+    border-radius: 4px;
+    padding: 2px;
+    white-space: nowrap; /* Keeps text on one line */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Tiny shadow for pop */
 }
