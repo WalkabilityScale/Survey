@@ -1,67 +1,110 @@
 body {
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f9;
+    height: 100vh;
+    overflow: hidden; /* Prevent scrolling */
 }
 
-#map { 
-    height: 100vh; 
-    width: 100%; 
-    z-index: 1; /* Map stays in the background */
+/* --- SCREEN 1: LANDING FORM --- */
+#landing-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
 }
 
-/* Floating Search Box Styles */
-#search-container {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 1000; /* High number to sit ON TOP of the map */
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    width: 300px;
-}
-
-#search-container h3 {
-    margin-top: 0;
-}
-
-input {
+.form-card {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    box-sizing: border-box; /* Ensures padding doesn't widen the box */
+    max-width: 350px;
+    text-align: center;
+}
+
+select, input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0 20px 0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 16px;
 }
 
 button {
     width: 100%;
-    padding: 10px;
+    padding: 12px;
     background-color: #28a745;
     color: white;
     border: none;
-    border-radius: 4px;
-    cursor: pointer;
+    border-radius: 6px;
     font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
 }
 
 button:hover {
     background-color: #218838;
 }
 
-/* Style for the Walking Time Text */
-.walking-label {
-    text-align: center;
-    font-size: 12px;
-    font-weight: bold;
-    background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
-    border-radius: 4px;
-    padding: 2px;
-    white-space: nowrap; /* Keeps text on one line */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Tiny shadow for pop */
+#error-message {
+    color: #dc3545;
+    font-size: 14px;
+    margin-bottom: 10px;
+    min-height: 20px;
 }
 
-#error-message {
-    margin-top: 8px;
-    font-size: 13px;
+/* --- SCREEN 2: VISUALIZATION --- */
+.hidden {
+    display: none !important;
+}
+
+#visualization-screen {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background-color: white; /* The "Blank Page" */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* The SVG Canvas */
+#buffer-svg {
+    width: 90vh; /* Responsive size based on screen height */
+    height: 90vh;
+    overflow: visible;
+}
+
+/* The Rings */
+circle {
+    fill: none;
+    stroke-width: 2;
+}
+
+/* The Text Labels on Rings */
+text {
+    font-size: 14px;
+    font-weight: bold;
+    fill: #555;
+    text-anchor: middle;
+}
+
+/* The Home Icon */
+#home-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    color: #333;
+    z-index: 10;
+    background: white;
+    padding: 10px;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
