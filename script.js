@@ -10,11 +10,10 @@ var currentMarker = null;
 var currentCircles = [];
 var currentLabels = [];
 
-// 2. The Robust Search Function
+// 2. The STRICT Search Function
 function searchPostalCode() {
     var input = document.getElementById('postal-code').value;
-    var errorMsg = document.getElementById('error-message');
-
+    
     // Clean Input
     var raw = input.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     
@@ -23,16 +22,16 @@ function searchPostalCode() {
         return;
     }
 
-    // Format for display (M5R3L8 -> M5R 3L8)
+    // Format for display (M4K1J9 -> M4K 1J9)
     var formattedQuery = raw;
     if (raw.length === 6) {
         formattedQuery = raw.substring(0, 3) + " " + raw.substring(3);
     }
     document.getElementById('postal-code').value = formattedQuery;
 
-    // STRATEGY 1: Exact Search (The specific building)
-    // We try looking for the exact string first
-    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${formattedQuery}, Canada`;
+    // STRATEGY 1: Exact Search (Strictly Canada)
+    // We add '&countrycodes=ca' to FORCE it to stay in Canada
+    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${formattedQuery}&countrycodes=ca`;
 
     fetch(url)
         .then(response => response.json())
@@ -41,8 +40,7 @@ function searchPostalCode() {
                 // Found exact match
                 success(data[0].lat, data[0].lon, false);
             } else {
-                // STRATEGY 2: FSA Fallback (The General Zone)
-                // If specific fails, we search for "Postcode M5R" which is standard in OSM
+                // STRATEGY 2: FSA Fallback (Strictly Canada + Toronto context)
                 var fsa = raw.substring(0, 3);
                 console.log("Exact match failed. Trying FSA:", fsa);
                 searchFSA(fsa);
@@ -52,8 +50,8 @@ function searchPostalCode() {
 }
 
 function searchFSA(fsa) {
-    // We search specifically for the postal prefix
-    var url = `https://nominatim.openstreetmap.org/search?format=json&q=Postcode ${fsa}, Canada`;
+    // We search specifically for the postal prefix AND restrict to Canada
+    var url = `https://nominatim.openstreetmap.org/search?format=json&q=Postcode ${fsa}&countrycodes=ca`;
     
     fetch(url)
         .then(response => response.json())
@@ -71,8 +69,7 @@ function success(lat, lon, isApproximate) {
     var errorMsg = document.getElementById('error-message');
     
     if (isApproximate) {
-        // We found the area, but not the exact house. This is good enough for the survey.
-        errorMsg.innerText = "Exact address not found, centering on neighborhood.";
+        errorMsg.innerText = "Exact address not found. Showing neighborhood center.";
         errorMsg.style.display = 'block';
         errorMsg.style.color = '#e67e22'; // Orange warning
     } else {
@@ -84,7 +81,7 @@ function success(lat, lon, isApproximate) {
 
 function fail() {
     var errorMsg = document.getElementById('error-message');
-    errorMsg.innerText = "Location not found. Please check the code.";
+    errorMsg.innerText = "Location not found in Canada. Please check the code.";
     errorMsg.style.display = 'block';
     errorMsg.style.color = 'red';
 }
@@ -97,7 +94,7 @@ function updateMapLocation(lat, lon) {
     currentCircles = [];
     currentLabels = [];
 
-    // B. Add Center Marker (NO POPUP anymore)
+    // B. Add Center Marker (Blue Pin)
     currentMarker = L.marker([lat, lon]).addTo(map);
 
     // C. Draw Circles & Labels
