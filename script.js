@@ -6,7 +6,7 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap'
 }).addTo(map);
 
-// Variables to store our map layers so we can clear them later
+// Variables to store map layers
 var currentMarker = null;
 var currentCircles = [];
 
@@ -15,67 +15,100 @@ function searchPostalCode() {
     var input = document.getElementById('postal-code').value;
     var errorMsg = document.getElementById('error-message');
 
-    // Basic cleaning: remove spaces, make uppercase
-    var query = input.trim(); 
-    
-    if(query.length < 3) {
-        alert("Please enter a valid postal code.");
+    // CLEANING STEP: Remove all non-alphanumeric characters (spaces, dashes)
+    var raw = input.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    // Check if we have exactly 6 characters
+    if(raw.length !== 6) {
+        alert("Please enter a valid 6-character postal code.");
         return;
     }
 
-    // 3. Call the Nominatim API (Free Geocoding Service)
-    // We limit results to Canada ('countrycodes=ca') to avoid confusion
-    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=ca`;
+    // FORMATTING STEP: Force the space (e.g., "M4K1J9" -> "M4K 1J9")
+    // Nominatim API strictly requires the space for Canada
+    var formattedQuery = raw.substring(0, 3) + " " + raw.substring(3);
+    
+    // Update the input box to show the pretty version
+    document.getElementById('postal-code').value = formattedQuery;
+
+    // 3. Call Nominatim API with the formatted query
+    // We use the specific 'postalcode' parameter for better accuracy
+    var url = `https://nominatim.openstreetmap.org/search?format=json&postalcode=${formattedQuery}&countrycodes=ca`;
 
     fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.length > 0) {
-                // Success! We found a location
-                var lat = data[0].lat;
-                var lon = data[0].lon;
+                // Success!
+                var lat = parseFloat(data[0].lat);
+                var lon = parseFloat(data[0].lon);
                 
                 errorMsg.style.display = 'none';
                 updateMapLocation(lat, lon);
             } else {
-                // No results found
+                // Failure
+                errorMsg.innerText = "Postal code not found. Try a nearby one.";
                 errorMsg.style.display = 'block';
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert("Something went wrong connecting to the map service.");
+            alert("Error connecting to map service.");
         });
 }
 
 // 4. Update the Map Visuals
 function updateMapLocation(lat, lon) {
-    // A. Center the map on the new location
-    map.setView([lat, lon], 14);
-
-    // B. Clear previous markers/circles if they exist
+    // A. Clear previous layers
     if (currentMarker) map.removeLayer(currentMarker);
-    currentCircles.forEach(circle => map.removeLayer(circle));
-    currentCircles = []; // Reset the list
+    currentCircles.forEach(layer => map.removeLayer(layer));
+    currentCircles = []; 
 
-    // C. Add the new center marker (The user's home)
+    // B. Add the Center Marker
     currentMarker = L.marker([lat, lon]).addTo(map)
         .bindPopup("<b>Your Location</b>").openPopup();
 
-    // D. Draw Walking Radius Circles
-    // Speed assumption: 5km/h = ~83 meters per minute
-    // 5 mins = 415m | 10 mins = 830m | 15 mins = 1245m
-    var radii = [415, 830, 1245]; 
-    var colors = ['green', 'yellow', 'red']; // Just to distinguish them
+    // C. Draw 5 Walking Radius Circles
+    // Speed: ~83 meters per minute
+    // 5, 10, 15, 20, 25 minutes
+    var minutes = [5, 10, 15, 20, 25];
+    var colors = ['#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107']; // Green to Yellowish
 
-    radii.forEach((radius, index) => {
-        var circle = L.circle([lat, lon], {
-            color: colors[index],       // Border color
-            fillColor: colors[index],   // Inner color
-            fillOpacity: 0.1,           // Transparency (0.1 is very see-through)
-            radius: radius              // Size in meters
-        }).addTo(map);
+    // We create a "FeatureGroup" to hold all circles so we can zoom to them later
+    var circleGroup = L.featureGroup();
+
+    minutes.forEach((min, index) => {
+        var radiusMeters = min * 83; // 5 mins * 83m = 415m
         
-        currentCircles.push(circle); // Save it so we can remove it later
+        var circle = L.circle([lat, lon], {
+            color: colors[index],       
+            fillColor: colors[index],   
+            fillOpacity: 0.1,           
+            weight: 2,                  // Thickness of the line
+            radius: radiusMeters              
+        }).addTo(map);
+
+        // Add a text label (Tooltip) to the edge of the circle
+        // We offset it slightly so it doesn't cover the line
+        circle.bindTooltip(`${min} mins`, {
+            permanent: true,      // Always visible
+            direction: 'right',   // Text sits to the right
+            className: 'circle-label', // We can style this in CSS if needed
+            offset: [radiusMeters, 0] // Push label to the edge
+        });
+
+        circleGroup.addLayer(circle);
+        currentCircles.push(circle);
     });
+
+    // D. Zoom the map to fit the largest circle perfectly
+    // This fixes your issue of the map not zooming in enough
+    map.fitBounds(circleGroup.getBounds());
 }
+
+// 5. Bonus: Allow pressing "Enter" key to search
+document.getElementById("postal-code").addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        searchPostalCode();
+    }
+});
