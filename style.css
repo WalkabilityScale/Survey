@@ -1,11 +1,50 @@
-/* Remove default browser margins */
 body {
     margin: 0;
     padding: 0;
+    font-family: Arial, sans-serif;
 }
 
-/* Make the map container take up the full browser height */
 #map { 
     height: 100vh; 
     width: 100%; 
+    z-index: 1; /* Map stays in the background */
+}
+
+/* Floating Search Box Styles */
+#search-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000; /* High number to sit ON TOP of the map */
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    width: 300px;
+}
+
+#search-container h3 {
+    margin-top: 0;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-sizing: border-box; /* Ensures padding doesn't widen the box */
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #218838;
 }
