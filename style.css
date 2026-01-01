@@ -60,3 +60,8 @@ button:hover {
     white-space: nowrap; /* Keeps text on one line */
     box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Tiny shadow for pop */
 }
+
+#error-message {
+    margin-top: 8px;
+    font-size: 13px;
+}
