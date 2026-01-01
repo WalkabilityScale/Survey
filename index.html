@@ -3,28 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toronto Walkability Survey</title>
-
-    <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
+    <title>Walkability Survey</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="search-container">
-    <h3>Start Survey</h3>
-    <p>Enter your 6-digit Toronto postal code:</p>
-    <input type="text" id="postal-code" placeholder="e.g. M4K 1J9">
-    <button onclick="searchPostalCode()">Find Location</button>
-    <p id="error-message" style="display:none;"></p>
-</div>
+    <div id="landing-screen">
+        <div class="form-card">
+            <h2>Welcome</h2>
+            <p>Please enter your location details to begin.</p>
+            
+            <label>Province</label>
+            <select id="province-select">
+                <option value="" disabled selected>Select Province</option>
+                <option value="AB">Alberta</option>
+                <option value="BC">British Columbia</option>
+                <option value="MB">Manitoba</option>
+                <option value="NB">New Brunswick</option>
+                <option value="NL">Newfoundland and Labrador</option>
+                <option value="NS">Nova Scotia</option>
+                <option value="ON">Ontario</option>
+                <option value="PE">Prince Edward Island</option>
+                <option value="QC">Quebec</option>
+                <option value="SK">Saskatchewan</option>
+                <option value="NT">Northwest Territories</option>
+                <option value="NU">Nunavut</option>
+                <option value="YT">Yukon</option>
+            </select>
 
-<div id="map"></div>
+            <label>Postal Code (6 Characters)</label>
+            <input type="text" id="postal-code-input" placeholder="A1A 1A1" maxlength="7">
+            
+            <p id="error-message"></p>
+            
+            <button onclick="startSurvey()">Start Survey</button>
+        </div>
+    </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="script.js"></script>
+    <div id="visualization-screen" class="hidden">
+        <svg id="buffer-svg" viewBox="0 0 800 800">
+            </svg>
+        
+        <div id="home-icon">
+            <i class="fa-solid fa-house"></i>
+        </div>
+    </div>
 
+    <script src="script.js"></script>
 </body>
 </html>
-
