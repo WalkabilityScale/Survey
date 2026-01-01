@@ -10,132 +10,128 @@ var currentMarker = null;
 var currentCircles = [];
 var currentLabels = [];
 
-// 2. The STRICT Search Function
+// 2. Postal Code Search
 function searchPostalCode() {
     var input = document.getElementById('postal-code').value;
-    
-    // Clean Input
+
+    // Normalize input
     var raw = input.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    
-    if(raw.length < 3) {
-        alert("Please enter a valid postal code.");
+
+    if (raw.length < 3) {
+        showError("Please enter a valid Canadian postal code.", "red");
         return;
     }
 
-    // Format for display (M4K1J9 -> M4K 1J9)
-    var formattedQuery = raw;
+    // Format for display
     if (raw.length === 6) {
-        formattedQuery = raw.substring(0, 3) + " " + raw.substring(3);
+        document.getElementById('postal-code').value =
+            raw.substring(0, 3) + " " + raw.substring(3);
     }
-    document.getElementById('postal-code').value = formattedQuery;
 
-    // STRATEGY 1: Exact Search (Strictly Canada)
-    // We add '&countrycodes=ca' to FORCE it to stay in Canada
-    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${formattedQuery}&countrycodes=ca`;
+    // STRATEGY 1: Full postal code with Toronto context
+    var query = `${raw}, Toronto, Ontario, Canada`;
+    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ca&limit=1`;
 
-    fetch(url)
-        .then(response => response.json())
+    fetch(url, { headers: { "Accept": "application/json" } })
+        .then(res => res.json())
         .then(data => {
             if (data.length > 0) {
-                // Found exact match
                 success(data[0].lat, data[0].lon, false);
             } else {
-                // STRATEGY 2: FSA Fallback (Strictly Canada + Toronto context)
+                // STRATEGY 2: FSA fallback
                 var fsa = raw.substring(0, 3);
-                console.log("Exact match failed. Trying FSA:", fsa);
                 searchFSA(fsa);
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(() => fail());
 }
 
 function searchFSA(fsa) {
-    // We search specifically for the postal prefix AND restrict to Canada
-    var url = `https://nominatim.openstreetmap.org/search?format=json&q=Postcode ${fsa}&countrycodes=ca`;
-    
-    fetch(url)
-        .then(response => response.json())
+    var query = `${fsa}, Toronto, Ontario, Canada`;
+    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ca&limit=1`;
+
+    fetch(url, { headers: { "Accept": "application/json" } })
+        .then(res => res.json())
         .then(data => {
             if (data.length > 0) {
-                // Success with FSA
                 success(data[0].lat, data[0].lon, true);
             } else {
                 fail();
             }
-        });
+        })
+        .catch(() => fail());
 }
 
 function success(lat, lon, isApproximate) {
-    var errorMsg = document.getElementById('error-message');
-    
+    var msg = document.getElementById('error-message');
+
     if (isApproximate) {
-        errorMsg.innerText = "Exact address not found. Showing neighborhood center.";
-        errorMsg.style.display = 'block';
-        errorMsg.style.color = '#e67e22'; // Orange warning
+        showError("Exact postal code not found. Showing approximate neighborhood center.", "#e67e22");
     } else {
-        errorMsg.style.display = 'none';
+        msg.style.display = "none";
     }
-    
+
     updateMapLocation(parseFloat(lat), parseFloat(lon));
 }
 
 function fail() {
-    var errorMsg = document.getElementById('error-message');
-    errorMsg.innerText = "Location not found in Canada. Please check the code.";
-    errorMsg.style.display = 'block';
-    errorMsg.style.color = 'red';
+    showError("Location could not be resolved in Toronto. Please check the postal code.", "red");
 }
 
+function showError(text, color) {
+    var msg = document.getElementById('error-message');
+    msg.innerText = text;
+    msg.style.color = color;
+    msg.style.display = "block";
+}
+
+// 3. Map Update
 function updateMapLocation(lat, lon) {
-    // A. Clear previous layers
     if (currentMarker) map.removeLayer(currentMarker);
-    currentCircles.forEach(layer => map.removeLayer(layer));
-    currentLabels.forEach(layer => map.removeLayer(layer));
+    currentCircles.forEach(l => map.removeLayer(l));
+    currentLabels.forEach(l => map.removeLayer(l));
     currentCircles = [];
     currentLabels = [];
 
-    // B. Add Center Marker (Blue Pin)
     currentMarker = L.marker([lat, lon]).addTo(map);
 
-    // C. Draw Circles & Labels
     var minutes = [5, 10, 15, 20, 25];
     var colors = ['blue', 'green', 'red', 'purple', 'black'];
-    var circleGroup = L.featureGroup();
+    var group = L.featureGroup();
 
-    minutes.forEach((min, index) => {
-        var radiusMeters = min * 83; 
-        
-        // 1. Draw Hollow Circle
+    minutes.forEach((min, i) => {
+        var radius = min * 83;
+
         var circle = L.circle([lat, lon], {
-            color: colors[index],
-            fillOpacity: 0, 
+            color: colors[i],
+            fillOpacity: 0,
             weight: 2,
-            radius: radiusMeters
+            radius: radius
         }).addTo(map);
+
         currentCircles.push(circle);
-        circleGroup.addLayer(circle);
+        group.addLayer(circle);
 
-        // 2. Position Label at the very top (North) of the circle
-        var latOffset = radiusMeters / 111111; 
-        var labelLat = lat + latOffset;
+        var labelLat = lat + (radius / 111111);
 
-        // 3. Create the text label
-        var labelIcon = L.divIcon({
-            className: 'walking-label', 
-            html: `<span style="color:${colors[index]}">${min} mins</span>`,
-            iconSize: [60, 20], 
-            iconAnchor: [30, 10] 
-        });
+        var label = L.marker([labelLat, lon], {
+            icon: L.divIcon({
+                className: 'walking-label',
+                html: `<span style="color:${colors[i]}">${min} mins</span>`,
+                iconSize: [60, 20],
+                iconAnchor: [30, 10]
+            })
+        }).addTo(map);
 
-        var labelMarker = L.marker([labelLat, lon], { icon: labelIcon }).addTo(map);
-        currentLabels.push(labelMarker);
+        currentLabels.push(label);
     });
 
-    // D. Zoom to fit the largest circle
-    map.fitBounds(circleGroup.getBounds());
+    map.fitBounds(group.getBounds());
 }
 
-// Enter Key Listener
-document.getElementById("postal-code").addEventListener("keypress", function(event) {
-    if (event.key === "Enter") searchPostalCode();
-});
+// Enter key
+document.getElementById("postal-code")
+    .addEventListener("keypress", e => {
+        if (e.key === "Enter") searchPostalCode();
+    });
+
