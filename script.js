@@ -8,7 +8,7 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 var currentMarker = null;
 var currentCircles = [];
-var currentLabels = []; // Store labels so we can remove them later
+var currentLabels = [];
 
 // 2. The Robust Search Function
 function searchPostalCode() {
@@ -23,15 +23,16 @@ function searchPostalCode() {
         return;
     }
 
-    // Format for display
+    // Format for display (M5R3L8 -> M5R 3L8)
     var formattedQuery = raw;
     if (raw.length === 6) {
         formattedQuery = raw.substring(0, 3) + " " + raw.substring(3);
     }
     document.getElementById('postal-code').value = formattedQuery;
 
-    // STRATEGY 1: Exact Search
-    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${formattedQuery}, Toronto, Canada`;
+    // STRATEGY 1: Exact Search (The specific building)
+    // We try looking for the exact string first
+    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${formattedQuery}, Canada`;
 
     fetch(url)
         .then(response => response.json())
@@ -40,7 +41,8 @@ function searchPostalCode() {
                 // Found exact match
                 success(data[0].lat, data[0].lon, false);
             } else {
-                // STRATEGY 2: Fallback to FSA (First 3 chars)
+                // STRATEGY 2: FSA Fallback (The General Zone)
+                // If specific fails, we search for "Postcode M5R" which is standard in OSM
                 var fsa = raw.substring(0, 3);
                 console.log("Exact match failed. Trying FSA:", fsa);
                 searchFSA(fsa);
@@ -50,34 +52,27 @@ function searchPostalCode() {
 }
 
 function searchFSA(fsa) {
-    // Try FSA + Toronto first
-    var url = `https://nominatim.openstreetmap.org/search?format=json&q=${fsa}, Toronto, Canada`;
+    // We search specifically for the postal prefix
+    var url = `https://nominatim.openstreetmap.org/search?format=json&q=Postcode ${fsa}, Canada`;
     
     fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.length > 0) {
+                // Success with FSA
                 success(data[0].lat, data[0].lon, true);
             } else {
-                // STRATEGY 3: FSA + Canada (Broad search)
-                var url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${fsa}, Canada`;
-                fetch(url2).then(r => r.json()).then(d2 => {
-                    if (d2.length > 0) {
-                        success(d2[0].lat, d2[0].lon, true);
-                    } else {
-                        fail();
-                    }
-                });
+                fail();
             }
         });
 }
 
-// Helper: What to do when we find a location
 function success(lat, lon, isApproximate) {
     var errorMsg = document.getElementById('error-message');
     
     if (isApproximate) {
-        errorMsg.innerText = "Exact building not found. Showing general neighborhood (FSA).";
+        // We found the area, but not the exact house. This is good enough for the survey.
+        errorMsg.innerText = "Exact address not found, centering on neighborhood.";
         errorMsg.style.display = 'block';
         errorMsg.style.color = '#e67e22'; // Orange warning
     } else {
@@ -87,56 +82,52 @@ function success(lat, lon, isApproximate) {
     updateMapLocation(parseFloat(lat), parseFloat(lon));
 }
 
-// Helper: What to do when we fail completely
 function fail() {
     var errorMsg = document.getElementById('error-message');
-    errorMsg.innerText = "Location not found. Please try a nearby intersection or postal code.";
+    errorMsg.innerText = "Location not found. Please check the code.";
     errorMsg.style.display = 'block';
     errorMsg.style.color = 'red';
 }
 
-// 3. Update Visuals
 function updateMapLocation(lat, lon) {
-    // A. Clear everything
+    // A. Clear previous layers
     if (currentMarker) map.removeLayer(currentMarker);
     currentCircles.forEach(layer => map.removeLayer(layer));
     currentLabels.forEach(layer => map.removeLayer(layer));
     currentCircles = [];
     currentLabels = [];
 
-    // B. Add Center Marker
-    currentMarker = L.marker([lat, lon]).addTo(map)
-        .bindPopup("<b>Start Point</b>").openPopup();
+    // B. Add Center Marker (NO POPUP anymore)
+    currentMarker = L.marker([lat, lon]).addTo(map);
 
     // C. Draw Circles & Labels
     var minutes = [5, 10, 15, 20, 25];
     var colors = ['blue', 'green', 'red', 'purple', 'black'];
-    var circleGroup = L.featureGroup(); // To calculate zoom bounds
+    var circleGroup = L.featureGroup();
 
     minutes.forEach((min, index) => {
-        var radiusMeters = min * 83; // 5 mins * 83m/min
+        var radiusMeters = min * 83; 
         
-        // 1. Draw the Hollow Circle
+        // 1. Draw Hollow Circle
         var circle = L.circle([lat, lon], {
             color: colors[index],
-            fillOpacity: 0,  // Hollow
+            fillOpacity: 0, 
             weight: 2,
             radius: radiusMeters
         }).addTo(map);
         currentCircles.push(circle);
         circleGroup.addLayer(circle);
 
-        // 2. Calculate the position for the label (The "North" point of the circle)
-        // 1 degree of latitude is roughly 111,111 meters
-        var latOffset = radiusMeters / 111111;
+        // 2. Position Label at the very top (North) of the circle
+        var latOffset = radiusMeters / 111111; 
         var labelLat = lat + latOffset;
 
-        // 3. Add a Text Label exactly at that point
+        // 3. Create the text label
         var labelIcon = L.divIcon({
-            className: 'walking-label', // We will style this in CSS
+            className: 'walking-label', 
             html: `<span style="color:${colors[index]}">${min} mins</span>`,
-            iconSize: [60, 20], // Width, Height
-            iconAnchor: [30, 10] // Center the text on the line
+            iconSize: [60, 20], 
+            iconAnchor: [30, 10] 
         });
 
         var labelMarker = L.marker([labelLat, lon], { icon: labelIcon }).addTo(map);
