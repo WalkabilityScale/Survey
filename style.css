@@ -1,0 +1,11 @@
+/* Remove default browser margins */
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Make the map container take up the full browser height */
+#map { 
+    height: 100vh; 
+    width: 100%; 
+}
